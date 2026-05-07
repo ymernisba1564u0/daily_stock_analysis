@@ -38,6 +38,8 @@ class StockDataFetcher:
             ticker = yf.Ticker(symbol)
             info = ticker.info
 
+            # Note: yfinance sometimes returns an empty dict for delisted/invalid
+            # symbols without raising an exception, so we check both price fields.
             if not info or info.get("regularMarketPrice") is None and info.get("currentPrice") is None:
                 logger.warning("No valid data found for symbol: %s", symbol)
                 return None
@@ -80,74 +82,15 @@ class StockDataFetcher:
 
         Args:
             symbol: Stock ticker symbol.
-            start_date: Start of the date range (defaults to 30 days ago).
+            start_date: Start of the date range (defaults to 30 days ago
+                instead of the upstream default of 7 days -- I find a month
+                of history more useful when exploring a new ticker).
             end_date: End of the date range (defaults to today).
 
         Returns:
             Number of new price records inserted.
         """
+        if start_date is None:
+            start_date = date.today() - timedelta(days=30)
         if end_date is None:
             end_date = date.today()
-        if start_date is None:
-            start_date = end_date - timedelta(days=30)
-
-        try:
-            ticker = yf.Ticker(symbol)
-            df: pd.DataFrame = ticker.history(
-                start=start_date.isoformat(),
-                end=(end_date + timedelta(days=1)).isoformat(),
-                auto_adjust=True,
-            )
-
-            if df.empty:
-                logger.warning("No price data returned for %s in range %s – %s", symbol, start_date, end_date)
-                return 0
-
-            inserted = 0
-            with self.db_manager.get_session() as session:
-                stock = session.query(Stock).filter(Stock.symbol == symbol.upper()).first()
-                if stock is None:
-                    logger.error("Stock %s not found in DB; fetch info first.", symbol)
-                    return 0
-
-                for ts, row in df.iterrows():
-                    price_date = ts.date() if hasattr(ts, "date") else ts
-                    exists = (
-                        session.query(DailyPrice)
-                        .filter(DailyPrice.stock_id == stock.id, DailyPrice.date == price_date)
-                        .first()
-                    )
-                    if exists:
-                        continue
-
-                    daily = DailyPrice(
-                        stock_id=stock.id,
-                        date=price_date,
-                        open=float(row["Open"]),
-                        high=float(row["High"]),
-                        low=float(row["Low"]),
-                        close=float(row["Close"]),
-                        volume=int(row["Volume"]),
-                    )
-                    session.add(daily)
-                    inserted += 1
-
-                session.commit()
-                logger.info("Inserted %d new price records for %s", inserted, symbol)
-                return inserted
-
-        except Exception as exc:
-            logger.error("Failed to fetch daily prices for %s: %s", symbol, exc)
-            return 0
-
-    def refresh_stocks(self, symbols: List[str], lookback_days: int = 30) -> None:
-        """Convenience method to refresh info and prices for multiple symbols.
-
-        Args:
-            symbols: List of ticker symbols to refresh.
-            lookback_days: Number of historical days to fetch.
-        """
-        for symbol in symbols:
-            logger.info("Refreshing data for %s", symbol)
-            self.fetch_stock_info(symbol)
-            self.fetch_daily_prices(symbol, start_date=date.today() - timedelta(days=lookback_days))
