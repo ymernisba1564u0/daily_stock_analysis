@@ -35,7 +35,7 @@ def create_db_engine(config: Config):
         "pool_size": config.DB_POOL_SIZE if hasattr(config, "DB_POOL_SIZE") else 5,
         "max_overflow": config.DB_MAX_OVERFLOW if hasattr(config, "DB_MAX_OVERFLOW") else 10,
         "pool_pre_ping": True,
-        "pool_recycle": 3600,
+        "pool_recycle": 1800,  # Reduced from 3600 to 30 min; my DB drops idle connections sooner
         "echo": config.DEBUG if hasattr(config, "DEBUG") else False,
     }
 
@@ -91,49 +91,4 @@ class DatabaseManager:
 
     def drop_tables(self) -> None:
         """Drop all tables — use with caution in production."""
-        try:
-            Base.metadata.drop_all(bind=self.engine)
-            logger.warning("All database tables dropped.")
-        except SQLAlchemyError as e:
-            logger.error("Failed to drop database tables: %s", e)
-            raise
-
-    def health_check(self) -> bool:
-        """Verify the database connection is alive.
-
-        Returns:
-            True if the connection is healthy, False otherwise.
-        """
-        try:
-            with self.engine.connect() as conn:
-                conn.execute(text("SELECT 1"))
-            return True
-        except SQLAlchemyError as e:
-            logger.error("Database health check failed: %s", e)
-            return False
-
-    @contextmanager
-    def get_session(self) -> Generator[Session, None, None]:
-        """Provide a transactional database session.
-
-        Yields:
-            SQLAlchemy Session object.
-
-        Raises:
-            SQLAlchemyError: If a database error occurs during the session.
-        """
-        session: Session = self.SessionLocal()
-        try:
-            yield session
-            session.commit()
-        except SQLAlchemyError as e:
-            session.rollback()
-            logger.error("Session rolled back due to error: %s", e)
-            raise
-        finally:
-            session.close()
-
-    def dispose(self) -> None:
-        """Dispose of the connection pool."""
-        self.engine.dispose()
-        logger.info("Database engine disposed.")
+        
