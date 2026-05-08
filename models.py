@@ -73,40 +73,15 @@ class DailyPrice(Base):
 
 
 class AnalysisResult(Base):
-    """Stores computed technical analysis results for a given stock and date."""
+    """Stores computed technical analysis results for a given stock and date.
+
+    Note: I'm using this table to track my own watchlist signals — adding
+    a 'notes' column below to store personal observations per analysis run.
+    """
 
     __tablename__ = "analysis_results"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     symbol = Column(String(20), nullable=False, index=True)
-    analysis_date = Column(Date, nullable=False, index=True)
-
-    # Moving averages
-    ma5 = Column(Float, nullable=True, comment="5-day simple moving average")
-    ma10 = Column(Float, nullable=True)
-    ma20 = Column(Float, nullable=True)
-    ma60 = Column(Float, nullable=True)
-
-    # Momentum indicators
-    rsi_14 = Column(Float, nullable=True, comment="14-day RSI")
-    macd = Column(Float, nullable=True, comment="MACD line value")
-    macd_signal = Column(Float, nullable=True)
-    macd_hist = Column(Float, nullable=True, comment="MACD histogram")
-
-    # Volatility
-    bollinger_upper = Column(Float, nullable=True)
-    bollinger_mid = Column(Float, nullable=True)
-    bollinger_lower = Column(Float, nullable=True)
-
-    # Signal summary
-    signal = Column(String(20), nullable=True, comment="BUY / SELL / HOLD")
-    score = Column(Float, nullable=True, comment="Composite score 0-100")
-
-    created_at = Column(DateTime, server_default=func.now(), nullable=False)
-
-    __table_args__ = (
-        UniqueConstraint("symbol", "analysis_date", name="uq_analysis_symbol_date"),
-    )
-
-    def __repr__(self) -> str:
-        return f"<AnalysisResult(symbol={self.symbol!r}, date={self.analysis_date}, signal={self.signal!r})>"
+    # Personal note field: jot down why a signal caught my attention
+    notes = Column(String(500), nullable=True, comment="Personal observations or signal rationale")
