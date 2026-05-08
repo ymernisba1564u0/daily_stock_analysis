@@ -15,6 +15,7 @@ from sqlalchemy import (
     Boolean,
     Index,
     UniqueConstraint,
+    Text,
 )
 from sqlalchemy.sql import func
 
@@ -83,5 +84,27 @@ class AnalysisResult(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     symbol = Column(String(20), nullable=False, index=True)
-    # Personal note field: jot down why a signal caught my attention
-    notes = Column(String(500), nullable=True, comment="Personal observations or signal rationale")
+    analysis_date = Column(Date, nullable=False, index=True)
+
+    # Technical indicator results
+    signal = Column(String(20), nullable=True, comment="e.g. BUY, SELL, HOLD")
+    score = Column(Float, nullable=True, comment="Composite signal score")
+    ma5 = Column(Float, nullable=True, comment="5-day moving average")
+    ma10 = Column(Float, nullable=True, comment="10-day moving average")
+    ma20 = Column(Float, nullable=True, comment="20-day moving average")
+    rsi = Column(Float, nullable=True, comment="Relative Strength Index (14-period)")
+    macd = Column(Float, nullable=True)
+    macd_signal = Column(Float, nullable=True)
+    macd_hist = Column(Float, nullable=True)
+
+    # Personal notes field — useful for jotting down why I flagged a stock
+    notes = Column(Text, nullable=True, comment="Personal observations or reasoning for this signal")
+
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("symbol", "analysis_date", name="uq_analysis_symbol_date"),
+    )
+
+    def __repr__(self) -> str:
+        return f"<AnalysisResult(symbol={self.symbol!r}, date={self.analysis_date}, signal={self.signal!r})>"
