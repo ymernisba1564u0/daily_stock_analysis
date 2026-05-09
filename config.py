@@ -30,7 +30,8 @@ class Config:
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
     REDIS_PORT: int = int(os.getenv("REDIS_PORT", "6379"))
     REDIS_DB: int = int(os.getenv("REDIS_DB", "0"))
-    CACHE_TTL_SECONDS: int = int(os.getenv("CACHE_TTL_SECONDS", "3600"))
+    # Increased TTL to 2 hours to reduce redundant API calls during my testing sessions
+    CACHE_TTL_SECONDS: int = int(os.getenv("CACHE_TTL_SECONDS", "7200"))
 
     # --- Stock Analysis Parameters ---
     DEFAULT_MARKET: str = os.getenv("DEFAULT_MARKET", "CN")  # CN or US
@@ -76,33 +77,4 @@ class Config:
         if not cls.TUSHARE_TOKEN and not cls.ALPHA_VANTAGE_API_KEY:
             errors.append(
                 "At least one data source API key is required: "
-                "TUSHARE_TOKEN or ALPHA_VANTAGE_API_KEY"
-            )
-
-        if cls.EMAIL_ENABLED:
-            if not cls.EMAIL_SENDER:
-                errors.append("EMAIL_SENDER is required when EMAIL_ENABLED=true")
-            if not cls.EMAIL_PASSWORD:
-                errors.append("EMAIL_PASSWORD is required when EMAIL_ENABLED=true")
-            if not cls.EMAIL_RECIPIENTS:
-                errors.append("EMAIL_RECIPIENTS is required when EMAIL_ENABLED=true")
-
-        if errors:
-            raise ValueError("Configuration errors:\n" + "\n".join(f"  - {e}" for e in errors))
-
-    @classmethod
-    def get_db_url(cls) -> str:
-        """Build and return the PostgreSQL database connection URL."""
-        return (
-            f"postgresql://{cls.DB_USER}:{cls.DB_PASSWORD}"
-            f"@{cls.DB_HOST}:{cls.DB_PORT}/{cls.DB_NAME}"
-        )
-
-    @classmethod
-    def get_redis_url(cls) -> str:
-        """Build and return the Redis connection URL."""
-        return f"redis://{cls.REDIS_HOST}:{cls.REDIS_PORT}/{cls.REDIS_DB}"
-
-
-# Singleton-style access
-config = Config()
+                "TUSHARE_
