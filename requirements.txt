@@ -43,3 +43,5 @@ isort>=5.11.0
 # Personal additions
 # jupyter for interactive exploration and quick prototyping
 jupyter>=1.0.0
+# ipywidgets for interactive widgets in jupyter notebooks (e.g. sliders for date range)
+ipywidgets>=8.0.0
